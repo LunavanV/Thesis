@@ -105,13 +105,13 @@ plt.close()  # Close the figure after saving to release resources
 
 # Counting significant Chi-squared and KS tests
 chi_counts = all_results.groupby('distribution').agg(
-    ChiSquared_001=('Chi-Squared P-value', lambda x: (x < 0.01).sum()),
-    ChiSquared_005=('Chi-Squared P-value', lambda x: (x < 0.05).sum())
+    ChiSquared_001=('Chi-Squared P-value', lambda x: (x > 0.01).sum()),
+    ChiSquared_005=('Chi-Squared P-value', lambda x: (x > 0.05).sum())
 ).reset_index()
 
 ks_counts = all_results.groupby('distribution').agg(
-    KS_001=('KS P-value', lambda x: (x < 0.01).sum()),
-    KS_005=('KS P-value', lambda x: (x < 0.05).sum())
+    KS_001=('KS P-value', lambda x: (x > 0.01).sum()),
+    KS_005=('KS P-value', lambda x: (x > 0.05).sum())
 ).reset_index()
 
 # Merging the counts
@@ -121,10 +121,14 @@ overview = pd.merge(chi_counts, ks_counts, on='distribution', how='outer')
 overview = overview.fillna(0)
 print(overview)
 
+# # Identifying significant groupings based on significance level
+# significant_groups = all_results[(all_results['Chi-Squared P-value'] > 0.05) & (all_results['KS P-value'] > 0.05)][
+#     'Group'].unique()
+# significant_groups_df = all_results[(all_results['Chi-Squared P-value'] > 0.05) & (all_results['KS P-value'] > 0.05)]
+
 # Identifying significant groupings based on significance level
-significant_groups = all_results[(all_results['Chi-Squared P-value'] < 0.05) & (all_results['KS P-value'] < 0.05)][
-    'Group'].unique()
-significant_groups_df = all_results[(all_results['Chi-Squared P-value'] < 0.05) & (all_results['KS P-value'] < 0.05)]
+significant_groups = all_results[(all_results['KS P-value'] > 0.01)]['Group'].unique()
+significant_groups_df = all_results[(all_results['KS P-value'] > 0.01)]
 
 # Extracting parameters for significant groups
 params = pd.DataFrame()
@@ -143,7 +147,7 @@ params[['Shape_Length_of_stay', 'Loc_Length_of_stay', 'Scale_Length_of_stay']] =
     '()').str.split(', ', expand=True)
 
 # Drop unnecessary columns and renaming to make it more clear when merging later
-params = params.drop(columns=['Loc_Length_of_stay', 'Parameters', 'Chi-Squared Statistic', 'Chi-Squared P-value', 'KS Statistic', 'KS P-value'])
+params = params.drop(columns=['Loc_Length_of_stay', 'Parameters', 'Chi-Squared Statistic', 'Chi-Squared P-value', 'KS Statistic'])
 params = params.rename(columns={'distribution': 'Distribution_Length_of_stay'})
 
 # Filter out insignificant groups
@@ -171,28 +175,47 @@ plt.tight_layout()  # Adjust layout to make labels and titles readable
 plt.savefig('qq_plots_Length_of_stay_insignificant_groups.png')
 plt.close()  # Close the figure after saving to release resources
 print(insignificant_groups)
+print(len(insignificant_groups))
 
 # Assigning distributions manually based on QQ plots for specific groups
-def assign_distribution(data, group_number, distribution):
+def assign_distribution(data, group_number, distribution, insignificant_groups_df):
     group_data = data[data['Group'] == group_number]['Wardtime']
     row_parameters = fit_distribution(group_data, distribution)
+    filtered_df = insignificant_groups_df[(insignificant_groups_df['Group'] == group_number) & (insignificant_groups_df['distribution'] == distribution)]
     row = pd.DataFrame({
         'Group': [group_number],
         'Distribution_Length_of_stay': [distribution],
         'Shape_Length_of_stay': [row_parameters[0]],
-        'Scale_Length_of_stay': [row_parameters[2]]
+        'Scale_Length_of_stay': [row_parameters[2]],
+        'KS P-value' : [filtered_df['KS P-value'].values[0]]
     })
     return row
-
+# List of specific groups to assign distributions
+log_norm_list = [5,7,9,13,16,22,25,32,34,36,39,41,48,49]
+gamma_list = [1,21,24,35,44,46,47]
+weibull_list = [2,3,6,14,15,23,31,43]
+#
+# Assign distributions for each group in log_norm_list
+for i in log_norm_list:
+    current_row = assign_distribution(data, i, 'lognorm', insignificant_groups_df)
+    params = pd.concat([params, current_row], ignore_index=True)
+# Assign distributions for each group in gamma_list
+for i in gamma_list:
+    current_row = assign_distribution(data, i, 'gamma', insignificant_groups_df)
+    params = pd.concat([params, current_row], ignore_index=True)
+# Assign distributions for each group in weibull_list
+for i in weibull_list:
+    current_row = assign_distribution(data, i, 'weibull', insignificant_groups_df)
+    params = pd.concat([params, current_row], ignore_index=True)
 # Assign distributions manually for other specific groups
-current_row = assign_distribution(data, 4, 'log-logistic')
+current_row = assign_distribution(data, 20, 'pearsonV', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-
-current_row = assign_distribution(data, 10, 'gamma')
+current_row = assign_distribution(data, 33, 'pearsonV', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-current_row = assign_distribution(data, 30, 'gamma')
+current_row = assign_distribution(data, 40, 'log-logistic', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-
+current_row = assign_distribution(data, 42, 'log-logistic', insignificant_groups_df)
+params = pd.concat([params, current_row], ignore_index=True)
 
 # Calculate average length of stay per group and add to params dataframe
 average_time_per_group = df_train.groupby('Group')['Wardtime'].mean().reset_index()

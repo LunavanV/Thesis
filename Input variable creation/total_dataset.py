@@ -101,10 +101,17 @@ for i, dist in enumerate(distributions):
     axes[0, i].set_xlim(0, 500000)  # Set x-axis limit for the first row
     plot_qq(df_train['Duration_Surgery'], dist, params_surgery_duation[dist], axes[1, i])
 
-axes[1, 3].set_ylim(0, 3000)  # Set y-axis limit for the second row 4th plot
-axes[1, 3].set_xlim(0, 3000)  # Set x-axis limit for the second row 4th plot
-axes[1, 4].set_ylim(0, 3000)  # Set y-axis limit for the second row 5th plot
-axes[1, 4].set_xlim(0, 3000)  # Set x-axis limit for the second row 5th plot
+#making sure all the axes are alined
+axes[1, 0].set_xlim(0, 1200)  # Set x-axis limit for the second row 1th plot
+axes[1, 0].set_ylim(0, 1200)  # Set y-axis limit for the second row 1th plot
+axes[1, 1].set_xlim(0, 1200)  # Set x-axis limit for the second row 2nd plot
+axes[1, 1].set_ylim(0, 1200)  # Set y-axis limit for the second row 2nd plot
+axes[1, 2].set_xlim(0, 1200)  # Set x-axis limit for the second row 3th plot
+axes[1, 2].set_ylim(0, 1200)  # Set y-axis limit for the second row 3th plot
+axes[1, 3].set_xlim(0, 1200)  # Set x-axis limit for the second row 4th plot
+axes[1, 3].set_ylim(0, 1200)  # Set x-axis limit for the second row 4th plot
+axes[1, 4].set_ylim(0, 1200)  # Set y-axis limit for the second row 5th plot
+axes[1, 4].set_xlim(0, 1200)  # Set x-axis limit for the second row 5th plot
 # Set titles for each row separately
 axes[0, 0].set_ylabel('Sample Quantiles (Lenght of Stay)')
 axes[1, 0].set_ylabel('Sample Quantiles (Duration Surgery)')
@@ -162,3 +169,17 @@ group_counts = pd.merge(train_counts, test_counts, on=['Group', 'Category', 'Gro
 group_counts = group_counts.fillna(0)
 
 print(group_counts)
+
+# Define the bins
+bins = [0, 500, 1000, 1500, 2000, 3000,4000,5000,10000,15000,20000,30000, float('inf')]  # Define your bins here
+
+# Use pd.cut to categorize the data
+bin_labels = ['0-500', '500-1000', '1000-1500', '1500-2000', '2000-3000', '3000-4000', '4000-5000', '5000-10000', '10000-15000','15000-20000', '20000-30000', '30000+']
+df_train['Wardtime_bins'] = pd.cut(df_train['Wardtime'], bins=bins, labels=bin_labels, right=False)
+
+# Count the occurrences in each bin
+bin_counts = df_train['Wardtime_bins'].value_counts().sort_index()
+
+# Print or use the counts as needed
+print("Count of data points in each bin:")
+print(bin_counts)

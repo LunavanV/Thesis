@@ -15,6 +15,7 @@ def ward_utilisation(df_resource_use, filepath):
 
    Returns/output:
     - A plot with average utilisation for all the wards in the hospital across the 28-day schedule cycle
+    - A plot with average utilisation per ward in the hospital
     - A plot per ward with the utilisation across 28-day schedule cycle
    """
 
@@ -62,8 +63,6 @@ def ward_utilisation(df_resource_use, filepath):
     utilisation_df = utilisation_df.replace([np.inf, -np.inf], np.nan).dropna(subset=['utilisation'])
     total_utilisation_df = total_utilisation_df.replace([np.inf, -np.inf], np.nan).dropna(subset=['utilisation'])
 
-    # Calculate the 75th percentile for each ward
-
     # Find the maximum utilisation value for setting plot limits
     max_value = utilisation_df['utilisation'].max()
     if np.isnan(max_value) or np.isinf(max_value):
@@ -83,7 +82,7 @@ def ward_utilisation(df_resource_use, filepath):
     # Adjust layout for better spacing between plots
     plt.tight_layout()
     # Save the plot for each ward utilisation
-    plt.savefig(f'{filepath}/ward_utilisation_per_ward.png')  # Save the plot
+    plt.savefig(f'{filepath}/ward_utilisation_per_ward_per_scheduleday.png')  # Save the plot
 
     # Create a new figure for the total hospital utilisation plot
     plt.figure(figsize=(8, 6))
@@ -92,12 +91,29 @@ def ward_utilisation(df_resource_use, filepath):
     plt.title('Total Hospital utilisation per Schedule Day')
     plt.xlabel('Schedule Day')
     plt.ylabel('utilisation')
-    plt.ylim(0, total_utilisation_df['utilisation'].max())  # Set y-axis limit from 0 to max value
+    plt.ylim(0, max(2,total_utilisation_df['utilisation'].max()))  # Set y-axis limit from 0 to max value
 
     # Adjust layout for better spacing
     plt.tight_layout()
     # Save the plot for total hospital utilisation
     plt.savefig(f'{filepath}/ward_utilisation_total.png')
+
+    # Create a new figure for the total hospital utilisation plot
+    plt.figure(figsize=(8, 6))
+    # Create a boxplot for total hospital utilisation per schedule day
+    sns.boxplot(data=utilisation_df, x='ward', y='utilisation')
+    plt.title('Total Hospital utilisation per ward')
+    plt.xlabel('Ward name')
+    plt.ylabel('utilisation')
+    plt.ylim(0, max(2, utilisation_df['utilisation'].max()))  # Set y-axis limit from 0 to max value
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+    # Save the plot for total hospital utilisation
+    plt.savefig(f'{filepath}/ward_utilisation_per_ward.png')
+
+    avg_utilisation_per_run = total_utilisation_df.groupby('run')['utilisation'].mean().reset_index(name='average_utilisation')
+    return avg_utilisation_per_run
 
 def OT_utilisation(df_surgeries_list, filepath):
     """
@@ -109,6 +125,7 @@ def OT_utilisation(df_surgeries_list, filepath):
 
     Returns:
     - A plot with average utilisation for all the OTs in the hospital across the 28-day schedule cycle
+    - A plot with average utilisation per OT in the hospital
     - A plot per OT with teh utilisation across 28-day schedule cycle
     """
     # Assign a run number to each dataframe
@@ -152,7 +169,7 @@ def OT_utilisation(df_surgeries_list, filepath):
     # Adjust layout for better spacing between plots
     plt.tight_layout()
     # Save the plot for each OT utilisation
-    plt.savefig(f'{filepath}/OT_utilisation_per_OT')  # Save the plot
+    plt.savefig(f'{filepath}/OT_utilisation_per_OT_per_scheduleday')  # Save the plot
 
     # Create a new figure for the total hospital utilisation plot
     plt.figure(figsize=(8, 6))
@@ -161,13 +178,31 @@ def OT_utilisation(df_surgeries_list, filepath):
     plt.title('Total OT utilisation per Schedule Day')
     plt.xlabel('Schedule Day')
     plt.ylabel('utilisation')
-    plt.ylim(0, 2)  # Set y-axis limit from 0 to 2
+    plt.ylim(0, max(2, min(5,df_sum['utilisation'].max())))  # Set y-axis limit from 0 to 2
 
     # Adjust layout for better spacing
     plt.tight_layout()
 
     # Save the plot for total hospital utilisation
     plt.savefig(f'{filepath}/OT_utilisation_total.png')  # Save the plot
+
+    # Create a new figure for the total hospital utilisation plot
+    plt.figure(figsize=(8, 6))
+    # Create a boxplot for total hospital utilisation per schedule day
+    sns.boxplot(data=df_sum, x='OT', y='utilisation')
+    plt.title('Total OT utilisation per OT')
+    plt.xlabel('OT name')
+    plt.ylabel('utilisation')
+    plt.ylim(0, max(2, min(5,df_sum['utilisation'].max())))  # Set y-axis limit from 0 to 2
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+
+    # Save the plot for total hospital utilisation
+    plt.savefig(f'{filepath}/OT_utilisation_per_OT.png')  # Save the plot
+
+    avg_utilisation_per_run = df_sum.groupby('run')['utilisation'].mean().reset_index(name='average_utilisation')
+    return avg_utilisation_per_run
 
 def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
     """
@@ -181,11 +216,15 @@ def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
     Returns:
     - A plot per OT that includes the frequency and length of the overtime and a histogram with number of overtime
     occurrances and frequency of length occurances.
+    - A plot for the total hospital that includes the occurances of overtime per OT and the occurences of overtime per
+    duration of overtime
     """
     # Initialize lists to store frequency, average length, and raw length data
     frequency_data = []
+    total_frequency_data = []
     length_data = []
     raw_length_data = []
+    num_runs = len(df_overtime_list)
 
     # Iterate over each run's dataframe
     for df in df_overtime_list:
@@ -198,6 +237,10 @@ def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
         grouped = df.groupby(['OT', 'schedule_day']).size().reset_index(name='frequency')
         frequency_data.append(grouped)
 
+        # Group by OT and schedule_day and count the occurrences of overtime
+        grouped = df.groupby(['OT']).size().reset_index(name='frequency')
+        total_frequency_data.append(grouped)
+
         # Group by OT and schedule_day and calculate the mean of overtime length
         length_grouped = df.groupby(['OT', 'schedule_day'])['overtime'].mean().reset_index(name='avg_length')
         length_data.append(length_grouped)
@@ -207,6 +250,7 @@ def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
 
     # Combine frequency and length data from all runs
     combined_frequency_data = pd.concat(frequency_data)
+    combined_total_frequency_data = pd.concat(total_frequency_data)
     combined_length_data = pd.concat(length_data)
     combined_raw_length_data = pd.concat(raw_length_data)
 
@@ -254,9 +298,9 @@ def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
         axes[i, 1].set_ylabel('Average Overtime Length')
 
         # Plot histogram of overtime lengths for each OT
-        or_length_data = ot_raw_length_data['overtime']
-        counts, bins, patches = axes[i, 2].hist(or_length_data, bins=bin_edges, edgecolor='black')
-        percentages = (counts / total_surgery_days) * 100
+        ot_length_data = ot_raw_length_data['overtime']
+        counts, bins, patches = axes[i, 2].hist(ot_length_data, bins=bin_edges, edgecolor='black')
+        percentages = (counts / (total_surgery_days*num_runs)) * 100
         for count, patch in zip(percentages, patches):
             patch.set_height(count)
         axes[i, 2].axvline(x=45, color='red', linestyle='--')
@@ -268,7 +312,44 @@ def overtime_visualization(df_overtime_list, filepath, schedule_repeats):
     # Adjust layout for better spacing between plots
     plt.tight_layout()
     # Save the plots to a file
-    plt.savefig(f'{filepath}/Ovetime')
+    plt.savefig(f'{filepath}/Overtime')
+
+    # Set up the figure with two subplots
+    fig, axs = plt.subplots(1, 2, figsize=(16, 8))
+
+    # First subplot (left): Frequency Boxplot for All OTs
+    combined_total_frequency_data['percentages'] = (combined_total_frequency_data['frequency'] / (
+        total_surgery_days)) * 100
+    frequency_boxplot_data = [
+        combined_total_frequency_data[combined_total_frequency_data['OT'] == ot]['percentages'].values for ot in
+        unique_ot_values]
+    axs[0].boxplot(frequency_boxplot_data)
+    axs[0].set_xticks(range(1, len(unique_ot_values) + 1))
+    axs[0].set_xticklabels(unique_ot_values)
+    axs[0].set_ylim(0, max(combined_total_frequency_data['percentages'].max(),
+                           25))  # Set the y-axis limit to the highest value or 25
+    axs[0].set_title('Frequency Boxplot for All OTs')
+    axs[0].set_xlabel('OT')
+    axs[0].set_ylabel('Frequency')
+
+    # Second subplot (right): Histogram of Overtime Length for OTs
+    or_length_data = combined_raw_length_data['overtime']
+    counts, bins, patches = axs[1].hist(or_length_data, bins=bin_edges, edgecolor='black')
+    percentages = (counts / (total_surgery_days *num_runs* len(unique_ot_values))) * 100  # Not only dividing by the total number of days in the schedule but also the number of OTs
+    for count, patch in zip(percentages, patches):
+        patch.set_height(count)
+    axs[1].axvline(x=45, color='red', linestyle='--')
+    axs[1].set_title('Histogram of Overtime Length for OTs')
+    axs[1].set_xlabel('Length of Overtime (min)')
+    axs[1].set_ylabel('Percentage of Surgery Days')
+    axs[1].set_ylim(0, max(5, max(percentages) * 1.1))  # Set limit to the higher value or 25
+
+
+    # Adjust layout to prevent overlap
+    plt.tight_layout()
+
+    # Save the combined plot
+    plt.savefig(f'{filepath}/Total_overtime.png')  # Save the plot
 
 def Unavailabilty(df_failed_unavailable_list, filepath, sort):
     """
@@ -294,6 +375,8 @@ def Unavailabilty(df_failed_unavailable_list, filepath, sort):
         df_counts = df[sort].value_counts().reset_index()
         # Rename the columns for clarity
         df_counts.columns = [sort, f'count_{i}']
+        #convert names to strings
+        df_counts[sort]=df_counts[sort].astype(str)
         # Append the counts dataframe to the counts_list
         counts_list.append(df_counts)
 

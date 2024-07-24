@@ -105,13 +105,13 @@ plt.close()  # Close the figure after saving to release resources
 
 # Counting significant Chi-squared and KS tests
 chi_counts = all_results.groupby('distribution').agg(
-    ChiSquared_001=('Chi-Squared P-value', lambda x: (x < 0.01).sum()),
-    ChiSquared_005=('Chi-Squared P-value', lambda x: (x < 0.05).sum())
+    ChiSquared_001=('Chi-Squared P-value', lambda x: (x > 0.01).sum()),
+    ChiSquared_005=('Chi-Squared P-value', lambda x: (x > 0.05).sum())
 ).reset_index()
 
 ks_counts = all_results.groupby('distribution').agg(
-    KS_001=('KS P-value', lambda x: (x < 0.01).sum()),
-    KS_005=('KS P-value', lambda x: (x < 0.05).sum())
+    KS_001=('KS P-value', lambda x: (x > 0.01).sum()),
+    KS_005=('KS P-value', lambda x: (x > 0.05).sum())
 ).reset_index()
 
 # Merging the counts
@@ -122,9 +122,8 @@ overview = overview.fillna(0)
 print(overview)
 
 # Identifying significant groupings based on significance level
-significant_groups = all_results[(all_results['Chi-Squared P-value'] < 0.05) & (all_results['KS P-value'] < 0.05)][
-    'Group'].unique()
-significant_groups_df = all_results[(all_results['Chi-Squared P-value'] < 0.05) & (all_results['KS P-value'] < 0.05)]
+significant_groups = all_results[(all_results['KS P-value'] > 0.05)]['Group'].unique()
+significant_groups_df = all_results[(all_results['KS P-value'] > 0.05)]
 
 # Extracting parameters for significant groups
 params = pd.DataFrame()
@@ -143,7 +142,7 @@ params[['Shape_surgery_duration', 'Loc_surgery_duration', 'Scale_surgery_duratio
     '()').str.split(', ', expand=True)
 
 # Drop unnecessary columns and renaming to make it more clear when merging later
-params = params.drop(columns=['Loc_surgery_duration', 'Parameters', 'Chi-Squared Statistic', 'Chi-Squared P-value', 'KS Statistic', 'KS P-value'])
+params = params.drop(columns=['Loc_surgery_duration', 'Parameters', 'Chi-Squared Statistic', 'Chi-Squared P-value', 'KS Statistic'])
 params = params.rename(columns={'distribution': 'Distribution_surgery_duration'})
 
 # Filter out insignificant groups
@@ -171,45 +170,29 @@ plt.tight_layout()  # Adjust layout to make labels and titles readable
 plt.savefig('qq_plots_surgery_duration_insignificant_groups.png')
 plt.close()  # Close the figure after saving to release resources
 
-
+print(insignificant_groups)
 # Assigning distributions manually based on QQ plots for specific groups
-def assign_distribution(data, group_number, distribution):
+def assign_distribution(data, group_number, distribution, insignificant_groups_df):
     group_data = data[data['Group'] == group_number]['Duration_Surgery']
     row_parameters = fit_distribution(group_data, distribution)
+    filtered_df = insignificant_groups_df[(insignificant_groups_df['Group'] == group_number) & (insignificant_groups_df['distribution'] == distribution)]
     row = pd.DataFrame({
         'Group': [group_number],
         'Distribution_surgery_duration': [distribution],
         'Shape_surgery_duration': [row_parameters[0]],
-        'Scale_surgery_duration': [row_parameters[2]]
+        'Scale_surgery_duration': [row_parameters[2]],
+        'KS P-value': [filtered_df['KS P-value'].values[0]]
     })
     return row
 
-
-# List of specific groups to assign distributions
-log_norm_list = [3, 4, 8, 10, 12, 30, 34, 48]
-
-# Assign distributions for each group in log_norm_list
-for i in log_norm_list:
-    current_row = assign_distribution(data, i, 'lognorm')
-    params = pd.concat([params, current_row], ignore_index=True)
-
 # Assign distributions manually for other specific groups
-current_row = assign_distribution(data, 7, 'gamma')
+current_row = assign_distribution(data, 43, 'weibull', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-current_row = assign_distribution(data, 11, 'gamma')
+current_row = assign_distribution(data, 44, 'lognorm', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-current_row = assign_distribution(data, 31, 'gamma')
+current_row = assign_distribution(data, 46, 'lognorm', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
-
-current_row = assign_distribution(data, 27, 'log-logistic')
-params = pd.concat([params, current_row], ignore_index=True)
-current_row = assign_distribution(data, 50, 'log-logistic')
-params = pd.concat([params, current_row], ignore_index=True)
-
-current_row = assign_distribution(data, 28, 'weibull')
-params = pd.concat([params, current_row], ignore_index=True)
-
-current_row = assign_distribution(data, 45, 'pearsonV')
+current_row = assign_distribution(data, 49, 'gamma', insignificant_groups_df)
 params = pd.concat([params, current_row], ignore_index=True)
 
 # Calculate average surgery duration per group and add to params dataframe

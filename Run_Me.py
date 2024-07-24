@@ -119,7 +119,7 @@ def running(runs, schedule_repeats, filename, model_version, ward_capacity='low'
     plt.close('all')
 
     df_successful_list = load_dfs(f"{filepath}/excel/successful_{{}}.csv", runs)
-    OT_utilisation(df_successful_list, filepath)
+    OT_average_utilisaiton = OT_utilisation(df_successful_list, filepath) # returning the average OT utilisation of the run
     plt.close('all')
 
     df_overtime_list = load_dfs(f"{filepath}/excel/overtime_{{}}.csv", runs)
@@ -127,11 +127,15 @@ def running(runs, schedule_repeats, filename, model_version, ward_capacity='low'
     plt.close('all')
 
     df_resource_list = load_dfs(f"{filepath}/excel/resource_use_{{}}.csv", runs)
-    ward_utilisation(df_resource_list, filepath)
+    ward_average_utilisation = ward_utilisation(df_resource_list, filepath) # returning the average ward utilisation of the run
     plt.close('all')
 
     # Save the counts data to an Excel file
     counts_data = pd.DataFrame(counts_data)
+    counts_data = pd.merge(counts_data, OT_average_utilisaiton, left_on='Run', right_on='run')
+    counts_data = pd.merge(counts_data, ward_average_utilisation, left_on='Run', right_on='run', suffixes=('', '_ward'))
+    counts_data.drop(columns=['run', 'run_ward'], inplace=True)
+    counts_data.rename(columns={'average_utilisation': 'average_utilisation_OT'}, inplace=True)
     counts_data.to_excel(f"{filepath}/counts.xlsx")
 
     plt.close()
@@ -141,52 +145,54 @@ if __name__ == "__main__":
     # running the mode first determining the number of runs, the number of schedule repeats, file name to same the otuput, which schedule you would want to run
     # other settings are possible to play around with the model.
 
-    running(3, 6 * 13, 'Base_run_A', 'A')
-    # running(3, 6 * 13, 'Base_run_B', 'B')
-    # running(3, 6 * 13, 'Base_run_C', 'C')
-    # running(3, 6 * 13, 'Base_run_D', 'D')
-    #
-    # running(3, 6 * 13, 'Scenario_1_A', 'A', lower_ward_capacity=0.8, increase_ward_stay=1.1 )
-    # running(3, 6 * 13, 'Scenario_1_B', 'B', lower_ward_capacity=0.8, increase_ward_stay=1.1)
-    # running(3, 6 * 13, 'Scenario_1_C', 'C', lower_ward_capacity=0.8, increase_ward_stay=1.1)
-    # running(3, 6 * 13, 'Scenario_1_D', 'D', lower_ward_capacity=0.8, increase_ward_stay=1.1)
-    #
-    # running(3, 6 * 13, 'Scenario_2_A', 'A', lower_ward_capacity=0.8, increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_2_B', 'B', lower_ward_capacity=0.8, increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_2_C', 'C', lower_ward_capacity=0.8, increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_2_D', 'D', lower_ward_capacity=0.8, increase_ward_stay=0.9)
-    #
-    # running(3, 6 * 13, 'Scenario_3_A', 'A', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
-    # running(3, 6 * 13, 'Scenario_3_B', 'B', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
-    # running(3, 6 * 13, 'Scenario_3_C', 'C', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
-    # running(3, 6 * 13, 'Scenario_3_D', 'D', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Cross_validation_real_data', '1')
 
-    # running(3, 6 * 13, 'Scenario_4_A', 'A', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_4_B', 'B', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_4_C', 'C', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
-    # running(3, 6 * 13, 'Scenario_4_D', 'D', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Base_run_A', 'A')
+    # running(7, 6 * 13, 'Base_run_B', 'B')
+    # running(7, 6 * 13, 'Base_run_C', 'C')
+    # running(7, 6 * 13, 'Base_run_D', 'D')
+    #
+    # running(7, 6 * 13, 'Scenario_1_A', 'A', lower_ward_capacity=0.8, increase_ward_stay=1.1 )
+    # running(7, 6 * 13, 'Scenario_1_B', 'B', lower_ward_capacity=0.8, increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Scenario_1_C', 'C', lower_ward_capacity=0.8, increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Scenario_1_D', 'D', lower_ward_capacity=0.8, increase_ward_stay=1.1)
+    #
+    # running(7, 6 * 13, 'Scenario_2_A', 'A', lower_ward_capacity=0.8, increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_2_B', 'B', lower_ward_capacity=0.8, increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_2_C', 'C', lower_ward_capacity=0.8, increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_2_D', 'D', lower_ward_capacity=0.8, increase_ward_stay=0.9)
+    #
+    # running(7, 6 * 13, 'Scenario_3_A', 'A', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Scenario_3_B', 'B', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Scenario_3_C', 'C', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
+    # running(7, 6 * 13, 'Scenario_3_D', 'D', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=1.1)
+    #
+    # running(7, 6 * 13, 'Scenario_4_A', 'A', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_4_B', 'B', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_4_C', 'C', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
+    # running(7, 6 * 13, 'Scenario_4_D', 'D', lower_ward_capacity=1.1,ward_capacity = 'high', increase_ward_stay=0.9)
 
-    # running(3, 6 * 13, 'Cross_validation_distributions', '1')
+    # running(7, 6 * 13, 'Cross_validation_distributions', '1')
     #
-    # running(3, 6 * 13, 'IC_probabliity_0.1', '1', increase_IC_probability = 0.1)
-    # running(3, 6 * 13, 'IC_probabliity_0.5', '1', increase_IC_probability = 0.5)
-    # running(3, 6 * 13, 'IC_probabliity_2', '1', increase_IC_probability = 2)
-    # running(3, 6 * 13, 'IC_probabliity_10', '1', increase_IC_probability = 10)
-
-    # running(3, 6 * 13, 'Surgery_duration_0.1', '1',increase_surgery_duration = 0.1)
-    # running(3, 6 * 13, 'Surgery_duration_0.5', '1',increase_surgery_duration = 0.5)
-    # running(3, 6 * 13, 'Surgery_duration_2', '1',increase_surgery_duration = 2)
-    # running(3, 6 * 13, 'Surgery_duration_10', '1', increase_surgery_duration = 10)
+    # running(7, 6 * 13, 'IC_probabliity_0.1', '1', increase_IC_probability = 0.1)
+    # running(7, 6 * 13, 'IC_probabliity_0.5', '1', increase_IC_probability = 0.5)
+    # running(7, 6 * 13, 'IC_probabliity_2', '1', increase_IC_probability = 2)
+    # running(7, 6 * 13, 'IC_probabliity_10', '1', increase_IC_probability = 10)
     #
-    # running(3, 6 * 13, 'Ward_capacity_0.1', '1', lower_ward_capacity=0.1)
-    # running(3, 6 * 13, 'Ward_capacity_0.5', '1', lower_ward_capacity=0.5)
-    # running(3, 6 * 13, 'Ward_capacity_2', '1', lower_ward_capacity=2)
-    # running(3, 6 * 13, 'Ward_capacity_10', '1', lower_ward_capacity=10)
+    # running(7, 6 * 13, 'Surgery_duration_0.1', '1',increase_surgery_duration = 0.1)
+    # running(7, 6 * 13, 'Surgery_duration_0.5', '1',increase_surgery_duration = 0.5)
+    # running(7, 6 * 13, 'Surgery_duration_2', '1',increase_surgery_duration = 2)
+    # running(7, 6 * 13, 'Surgery_duration_10', '1', increase_surgery_duration = 10)
     #
-    # running(3, 6 * 13, 'Ward_stay_0.1', '1', increase_ward_stay=0.1)
-    # running(3, 6 * 13, 'Ward_stay_0.5', '1', increase_ward_stay=0.5)
-    # running(3, 6 * 13, 'Ward_stay_2', '1', increase_ward_stay=2)
-    # running(3, 6 * 13, 'Ward_stay_10', '1', increase_ward_stay=10)
+    # running(7, 6 * 13, 'Ward_capacity_0.1', '1', lower_ward_capacity=0.1)
+    # running(7, 6 * 13, 'Ward_capacity_0.5', '1', lower_ward_capacity=0.5)
+    # running(7, 6 * 13, 'Ward_capacity_2', '1', lower_ward_capacity=2)
+    # running(7, 6 * 13, 'Ward_capacity_10', '1', lower_ward_capacity=10)
+    #
+    # running(7, 6 * 13, 'Ward_stay_0.1', '1', increase_ward_stay=0.1)
+    # running(7, 6 * 13, 'Ward_stay_0.5', '1', increase_ward_stay=0.5)
+    # running(7, 6 * 13, 'Ward_stay_2', '1', increase_ward_stay=2)
+    # running(7, 6 * 13, 'Ward_stay_10', '1', increase_ward_stay=10)
 
 
 
